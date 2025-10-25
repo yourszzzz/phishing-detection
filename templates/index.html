@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔒 Phishing URL Detection</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <div class="header-content">
+                <h1>🔒 Phishing URL Detection</h1>
+                <p class="subtitle">Machine Learning-Based URL Security Analyzer</p>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main>
+            <!-- Input Section -->
+            <div class="input-section">
+                <h2>Enter URL to Analyze</h2>
+                <div class="input-group">
+                    <input 
+                        type="text" 
+                        id="urlInput" 
+                        placeholder="https://example.com or example.com"
+                        autocomplete="off"
+                    >
+                    <button id="checkBtn" onclick="checkURL()">
+                        <span class="btn-text">Check URL</span>
+                        <span class="btn-icon">🔍</span>
+                    </button>
+                </div>
+                <p class="help-text">
+                    💡 Tip: You can enter a URL with or without http:// or https://
+                </p>
+            </div>
+
+            <!-- Loading Indicator -->
+            <div id="loading" class="loading hidden">
+                <div class="spinner"></div>
+                <p>Analyzing URL...</p>
+            </div>
+
+            <!-- Results Section -->
+            <div id="results" class="results hidden">
+                <!-- Result will be inserted here -->
+            </div>
+
+            <!-- Example URLs Section -->
+            <div class="examples-section">
+                <h3>📝 Example URLs to Test</h3>
+                <div class="examples-grid">
+                    <div class="example-card legitimate">
+                        <h4>✅ Legitimate URLs</h4>
+                        <ul>
+                            <li onclick="fillURL('https://www.google.com')">https://www.google.com</li>
+                            <li onclick="fillURL('https://github.com')">https://github.com</li>
+                            <li onclick="fillURL('https://www.amazon.com')">https://www.amazon.com</li>
+                            <li onclick="fillURL('https://www.wikipedia.org')">https://www.wikipedia.org</li>
+                        </ul>
+                    </div>
+                    <div class="example-card phishing">
+                        <h4>⚠️ Suspicious URLs</h4>
+                        <ul>
+                            <li onclick="fillURL('http://paypal-secure-login.com/update')">http://paypal-secure-login.com/update</li>
+                            <li onclick="fillURL('http://secure-banking-verify.tk/login')">http://secure-banking-verify.tk/login</li>
+                            <li onclick="fillURL('http://apple-id-verify.cf/account')">http://apple-id-verify.cf/account</li>
+                            <li onclick="fillURL('http://192.168.1.1/admin')">http://192.168.1.1/admin</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Features Explanation -->
+            <div class="info-section">
+                <h3>🎯 How It Works</h3>
+                <p>
+                    Our machine learning model analyzes various features of the URL to determine 
+                    if it's potentially a phishing attempt:
+                </p>
+                <div class="features-grid">
+                    <div class="feature-item">
+                        <span class="feature-icon">📏</span>
+                        <strong>URL Length</strong>
+                        <p>Phishing URLs are often longer</p>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-icon">🔗</span>
+                        <strong>Domain Structure</strong>
+                        <p>Suspicious subdomains and patterns</p>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-icon">🔢</span>
+                        <strong>Special Characters</strong>
+                        <p>Unusual characters and symbols</p>
+                    </div>
+                    <div class="feature-item">
+                        <span class="feature-icon">🔒</span>
+                        <strong>HTTPS Protocol</strong>
+                        <p>Presence of secure connection</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer>
+            <p>
+                Powered by Machine Learning (Random Forest) | 
+                <a href="https://github.com" target="_blank">View on GitHub</a>
+            </p>
+            <p class="disclaimer">
+                ⚠️ <strong>Disclaimer:</strong> This tool provides predictions based on machine learning. 
+                Always exercise caution when clicking unknown links.
+            </p>
+        </footer>
+    </div>
+
+    <!-- JavaScript -->
+    <script>
+        // Allow Enter key to submit
+        document.getElementById('urlInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                checkURL();
+            }
+        });
+
+        function fillURL(url) {
+            document.getElementById('urlInput').value = url;
+            document.getElementById('urlInput').focus();
+        }
+
+        async function checkURL() {
+            const urlInput = document.getElementById('urlInput');
+            const url = urlInput.value.trim();
+            
+            // Validate input
+            if (!url) {
+                alert('Please enter a URL');
+                return;
+            }
+
+            // Show loading, hide results
+            document.getElementById('loading').classList.remove('hidden');
+            document.getElementById('results').classList.add('hidden');
+
+            try {
+                // Make API request
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ url: url })
+                });
+
+                const data = await response.json();
+
+                // Hide loading
+                document.getElementById('loading').classList.add('hidden');
+
+                if (response.ok) {
+                    displayResults(data);
+                } else {
+                    displayError(data.error || 'An error occurred');
+                }
+            } catch (error) {
+                document.getElementById('loading').classList.add('hidden');
+                displayError('Network error. Please try again.');
+                console.error('Error:', error);
+            }
+        }
+
+        function displayResults(data) {
+            const resultsDiv = document.getElementById('results');
+            const isPhishing = data.is_phishing;
+            const statusClass = isPhishing ? 'phishing' : 'legitimate';
+            const statusIcon = isPhishing ? '⚠️' : '✅';
+            const statusText = isPhishing ? 'PHISHING DETECTED' : 'APPEARS LEGITIMATE';
+            
+            resultsDiv.innerHTML = `
+                <div class="result-card ${statusClass}">
+                    <div class="result-header">
+                        <span class="result-icon">${statusIcon}</span>
+                        <h3>${statusText}</h3>
+                    </div>
+                    
+                    <div class="result-url">
+                        <strong>URL:</strong> ${escapeHtml(data.url)}
+                    </div>
+                    
+                    <div class="confidence-section">
+                        <div class="confidence-bar">
+                            <div class="confidence-label">
+                                <span>Confidence</span>
+                                <span class="confidence-value">${data.confidence.toFixed(2)}%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill ${statusClass}" 
+                                     style="width: ${data.confidence}%">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="probability-grid">
+                            <div class="probability-item">
+                                <span class="prob-label">Legitimate</span>
+                                <span class="prob-value">${data.legitimate_probability.toFixed(2)}%</span>
+                            </div>
+                            <div class="probability-item">
+                                <span class="prob-label">Phishing</span>
+                                <span class="prob-value">${data.phishing_probability.toFixed(2)}%</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="features-section">
+                        <h4>📊 Extracted Features</h4>
+                        <div class="features-table">
+                            ${Object.entries(data.features).map(([key, value]) => `
+                                <div class="feature-row">
+                                    <span class="feature-name">${formatFeatureName(key)}</span>
+                                    <span class="feature-value">${value}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    
+                    ${isPhishing ? `
+                        <div class="warning-box">
+                            <strong>⚠️ Warning:</strong> This URL shows characteristics common to phishing websites. 
+                            Do not enter personal information, passwords, or financial details on this site.
+                        </div>
+                    ` : `
+                        <div class="success-box">
+                            <strong>✅ Note:</strong> This URL appears legitimate based on our analysis. 
+                            However, always verify the domain and use caution with sensitive information.
+                        </div>
+                    `}
+                </div>
+            `;
+            
+            resultsDiv.classList.remove('hidden');
+            resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        function displayError(message) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = `
+                <div class="result-card error">
+                    <div class="result-header">
+                        <span class="result-icon">❌</span>
+                        <h3>ERROR</h3>
+                    </div>
+                    <p>${escapeHtml(message)}</p>
+                </div>
+            `;
+            resultsDiv.classList.remove('hidden');
+        }
+
+        function formatFeatureName(key) {
+            return key.replace(/_/g, ' ')
+                     .replace(/\b\w/g, l => l.toUpperCase());
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>
